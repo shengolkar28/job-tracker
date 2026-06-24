@@ -1,0 +1,205 @@
+/* ─── Google Fonts — Inter ─────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ─── Tailwind directives ──────────────────────────────────────────────────── */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Base reset & tokens ──────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    background-color: #0A0A0A;
+    color: #FFFFFF;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: #0A0A0A;
+    color: #FFFFFF;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* Sharp focus ring — yellow, no browser default */
+  :focus-visible {
+    outline: 1px solid #FFE500;
+    outline-offset: 2px;
+  }
+
+  /* Kill default browser outlines */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Headings — heavy, tight */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: #FFFFFF;
+  }
+
+  h1 { font-size: 2.5rem; }
+  h2 { font-size: 1.75rem; }
+  h3 { font-size: 1.25rem; }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  input, textarea, select {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #111111;
+    color: #FFFFFF;
+    border: 1px solid #222222;
+    border-radius: 2px;
+    font-size: 14px;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #888888;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: #FFE500;
+  }
+
+  button {
+    font-family: 'Inter', system-ui, sans-serif;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+}
+
+/* ─── Custom scrollbar ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #FFE500;
+  border-radius: 0px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FFE500;
+  opacity: 0.8;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #FFE500 #0A0A0A;
+}
+
+/* ─── Utility component classes ────────────────────────────────────────────── */
+@layer components {
+  /* Primary CTA — yellow fill, black text */
+  .btn-primary {
+    @apply bg-brand-yellow text-black font-bold text-sm tracking-tight
+           px-5 py-2.5 border border-brand-yellow
+           transition-all duration-150;
+  }
+  .btn-primary:hover {
+    @apply bg-transparent text-brand-yellow;
+  }
+
+  /* Ghost button — transparent, white border, yellow hover */
+  .btn-ghost {
+    @apply bg-transparent text-white font-semibold text-sm tracking-tight
+           px-5 py-2.5 border border-brand-border
+           transition-all duration-150;
+  }
+  .btn-ghost:hover {
+    @apply border-brand-yellow text-brand-yellow;
+  }
+
+  /* Danger button */
+  .btn-danger {
+    @apply bg-transparent text-brand-danger font-semibold text-sm tracking-tight
+           px-5 py-2.5 border border-brand-danger
+           transition-all duration-150;
+  }
+  .btn-danger:hover {
+    @apply bg-brand-danger text-white;
+  }
+
+  /* Card / surface */
+  .card {
+    @apply bg-brand-surface border border-brand-border p-5;
+  }
+
+  /* Input field */
+  .input-field {
+    @apply w-full bg-brand-surface border border-brand-border text-white
+           text-sm px-3 py-2.5 placeholder-brand-muted
+           focus:border-brand-yellow focus:outline-none
+           transition-colors duration-150;
+  }
+
+  /* Badge — yellow */
+  .badge-yellow {
+    @apply bg-brand-yellow text-black text-xs font-bold px-2 py-0.5
+           tracking-tight uppercase;
+  }
+
+  /* Badge — muted */
+  .badge-muted {
+    @apply bg-brand-border text-brand-muted text-xs font-semibold px-2 py-0.5
+           tracking-tight uppercase;
+  }
+
+  /* Badge — success */
+  .badge-success {
+    @apply border border-brand-success text-brand-success text-xs font-semibold
+           px-2 py-0.5 tracking-tight uppercase;
+  }
+
+  /* Badge — danger */
+  .badge-danger {
+    @apply border border-brand-danger text-brand-danger text-xs font-semibold
+           px-2 py-0.5 tracking-tight uppercase;
+  }
+
+  /* Section label — muted caps */
+  .label {
+    @apply text-brand-muted text-xs font-semibold tracking-widest uppercase;
+  }
+
+  /* Divider */
+  .divider {
+    @apply border-t border-brand-border w-full;
+  }
+}
+
+/* ─── Animations ───────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
