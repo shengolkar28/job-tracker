@@ -173,6 +173,13 @@ const refresh = async (req, res) => {
 
     return res.status(200).json({
       accessToken: newAccessToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        created_at: user.created_at,
+        reminder_enabled: user.reminder_enabled,
+      },
     });
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
