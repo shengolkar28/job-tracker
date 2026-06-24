@@ -1,0 +1,90 @@
+// ─────────────────────────────────────────────
+// Job Application Tracker — Prisma Schema
+// Database: PostgreSQL
+// ─────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────── Enums ────────────
+
+enum JobStatus {
+  applied
+  screening
+  interview
+  offer
+  rejected
+  ghosted
+}
+
+enum Priority {
+  low
+  medium
+  high
+}
+
+enum ReminderType {
+  followup
+  interview
+  deadline
+}
+
+// ──────────── Models ────────────
+
+model User {
+  id               String     @id @default(uuid())
+  name             String     @db.VarChar(100)
+  email            String     @unique @db.VarChar(255)
+  password_hash    String     @db.Text
+  created_at       DateTime   @default(now())
+  reminder_enabled Boolean    @default(true)
+  refresh_token    String?    @db.Text
+
+  jobs             Job[]
+  reminders        Reminder[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Job {
+  id           String    @id @default(uuid())
+  user_id      String
+  company      String    @db.VarChar(100)
+  role         String    @db.VarChar(100)
+  status       JobStatus @default(applied)
+  applied_date DateTime  @db.Date
+  last_updated DateTime  @updatedAt
+  notes        String?   @db.Text
+  job_url      String?   @db.Text
+  salary_range String?   @db.VarChar(50)
+  location     String?   @db.VarChar(100)
+  priority     Priority  @default(medium)
+
+  user         User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  reminders    Reminder[]
+
+  @@index([user_id])
+  @@map("jobs")
+}
+
+model Reminder {
+  id      String       @id @default(uuid())
+  job_id  String
+  user_id String
+  sent_at DateTime     @default(now())
+  type    ReminderType
+
+  job     Job  @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([job_id])
+  @@index([user_id])
+  @@map("reminders")
+}
