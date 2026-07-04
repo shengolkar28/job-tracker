@@ -3,7 +3,6 @@
 [![Live Demo](https://img.shields.io/badge/Live_Demo-tracknhunt.vercel.app-black?style=flat-square&logo=vercel)](https://tracknhunt.vercel.app)
 [![Backend](https://img.shields.io/badge/Backend-Node.js_%2F_Express-black?style=flat-square&logo=nodedotjs)](https://nodejs.org)
 [![Frontend](https://img.shields.io/badge/Frontend-React_%2F_Vite-black?style=flat-square&logo=react)](https://react.dev)
-[![License](https://img.shields.io/badge/License-MIT-black?style=flat-square)](./LICENSE)
 
 A full-stack SaaS application to track job applications, visualize progress, and stay on top of your job search.
 
@@ -211,7 +210,3 @@ This starts the backend, frontend (served via Nginx), PostgreSQL, and Redis as a
 [https://tracknhunt.vercel.app](https://tracknhunt.vercel.app)
 
 ---
-
-## License
-
-MIT
