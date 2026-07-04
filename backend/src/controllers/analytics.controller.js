@@ -1,4 +1,5 @@
 const prisma = require('../utils/prisma');
+const { getCache, setCache } = require('../utils/redis');
 
 // All valid status values from the JobStatus enum
 const ALL_STATUSES = ['applied', 'screening', 'interview', 'offer', 'rejected', 'ghosted'];
@@ -29,6 +30,14 @@ const getWeekStart = (date) => {
 const getSummary = async (req, res) => {
   try {
     const userId = req.user.userId;
+
+    const cacheKey = `analytics:${userId}:summary`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      console.log('[Cache HIT]', cacheKey);
+      return res.status(200).json(cached);
+    }
+    console.log('[Cache MISS]', cacheKey);
 
     // Run all independent queries in parallel
     const [totalApplications, statusGroups, thisWeekCount, respondedJobs] =
@@ -91,14 +100,17 @@ const getSummary = async (req, res) => {
       avgDaysToResponse = round(totalDays / respondedJobs.length);
     }
 
-    return res.status(200).json({
+    const responseData = {
       totalApplications,
       byStatus: statusMap,
       offerRate,
       responseRate,
       avgDaysToResponse,
       thisWeekCount,
-    });
+    };
+
+    await setCache(cacheKey, responseData, 300);
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error('getSummary error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -110,6 +122,14 @@ const getSummary = async (req, res) => {
 const getByStatus = async (req, res) => {
   try {
     const userId = req.user.userId;
+
+    const cacheKey = `analytics:${userId}:by-status`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      console.log('[Cache HIT]', cacheKey);
+      return res.status(200).json(cached);
+    }
+    console.log('[Cache MISS]', cacheKey);
 
     const groups = await prisma.job.groupBy({
       by: ['status'],
@@ -129,7 +149,9 @@ const getByStatus = async (req, res) => {
       count: countByStatus[status] || 0,
     }));
 
-    return res.status(200).json({ byStatus: result });
+    const responseData = { byStatus: result };
+    await setCache(cacheKey, responseData, 300);
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error('getByStatus error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -141,6 +163,14 @@ const getByStatus = async (req, res) => {
 const getByWeek = async (req, res) => {
   try {
     const userId = req.user.userId;
+
+    const cacheKey = `analytics:${userId}:by-week`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      console.log('[Cache HIT]', cacheKey);
+      return res.status(200).json(cached);
+    }
+    console.log('[Cache MISS]', cacheKey);
 
     // Calculate the Monday that started 12 weeks ago
     const now = new Date();
@@ -181,7 +211,9 @@ const getByWeek = async (req, res) => {
       count,
     }));
 
-    return res.status(200).json({ byWeek: result });
+    const responseData = { byWeek: result };
+    await setCache(cacheKey, responseData, 300);
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error('getByWeek error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -193,6 +225,14 @@ const getByWeek = async (req, res) => {
 const getByCompany = async (req, res) => {
   try {
     const userId = req.user.userId;
+
+    const cacheKey = `analytics:${userId}:by-company`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      console.log('[Cache HIT]', cacheKey);
+      return res.status(200).json(cached);
+    }
+    console.log('[Cache MISS]', cacheKey);
 
     const groups = await prisma.job.groupBy({
       by: ['company'],
@@ -207,7 +247,9 @@ const getByCompany = async (req, res) => {
       count: g._count.company,
     }));
 
-    return res.status(200).json({ byCompany: result });
+    const responseData = { byCompany: result };
+    await setCache(cacheKey, responseData, 300);
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error('getByCompany error:', error);
     return res.status(500).json({ message: 'Internal server error' });

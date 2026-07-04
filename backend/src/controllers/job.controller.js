@@ -1,4 +1,5 @@
 const prisma = require('../utils/prisma');
+const { deleteCacheByPattern } = require('../utils/redis');
 
 // Valid enum values derived from Prisma schema
 const VALID_STATUSES = ['applied', 'screening', 'interview', 'offer', 'rejected', 'ghosted'];
@@ -164,6 +165,7 @@ const createJob = async (req, res) => {
       },
     });
 
+    await deleteCacheByPattern(`analytics:${userId}:*`);
     return res.status(201).json({ message: 'Job created successfully', job });
   } catch (error) {
     console.error('createJob error:', error);
@@ -229,6 +231,7 @@ const updateJob = async (req, res) => {
 
     const job = await prisma.job.update({ where: { id }, data });
 
+    await deleteCacheByPattern(`analytics:${userId}:*`);
     return res.status(200).json({ message: 'Job updated successfully', job });
   } catch (error) {
     console.error('updateJob error:', error);
@@ -251,6 +254,7 @@ const deleteJob = async (req, res) => {
 
     await prisma.job.delete({ where: { id } });
 
+    await deleteCacheByPattern(`analytics:${userId}:*`);
     return res.status(200).json({ message: 'Job deleted successfully' });
   } catch (error) {
     console.error('deleteJob error:', error);
@@ -288,6 +292,7 @@ const updateJobStatus = async (req, res) => {
       data: { status },
     });
 
+    await deleteCacheByPattern(`analytics:${userId}:*`);
     return res.status(200).json({ message: 'Job status updated successfully', job });
   } catch (error) {
     console.error('updateJobStatus error:', error);

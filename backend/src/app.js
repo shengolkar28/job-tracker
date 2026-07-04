@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth.routes');
 const jobRoutes = require('./routes/job.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
+const { startReminderCron } = require('./services/reminder.service');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,7 +15,7 @@ const PORT = process.env.PORT || 5000;
 // ──────────── Middleware ────────────
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: 'http://localhost:5173',
   credentials: true,
 }));
 app.use(express.json());
@@ -41,6 +42,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  startReminderCron();
 });
 
 module.exports = app;
