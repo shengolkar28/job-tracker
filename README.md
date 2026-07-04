@@ -9,9 +9,6 @@ A full-stack SaaS application to track job applications, visualize progress, and
 
 ---
 
-![Dashboard](./screenshots/dashboard.png)
-
----
 
 ## Features
 
