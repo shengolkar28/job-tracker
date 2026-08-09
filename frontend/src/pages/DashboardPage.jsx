@@ -55,25 +55,29 @@ const SkeletonRow = () => (
 // ─── DashboardPage ────────────────────────────────────────────────────────────
 const DashboardPage = () => {
   // ── State ──────────────────────────────────────────────────────────────────
-  const [jobs, setJobs]               = useState([]);
-  const [summary, setSummary]         = useState(null);
+  const [jobs, setJobs] = useState([]);
+  const [kanbanJobs, setKanbanJobs] = useState([]);   // all jobs, unpaginated
+  const [summary, setSummary] = useState(null);
   const [loadingJobs, setLoadingJobs] = useState(true);
+  const [loadingKanban, setLoadingKanban] = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(true);
-  const [view, setView]               = useState('list'); // 'list' | 'kanban'
+  const [view, setView] = useState('list'); // 'list' | 'kanban'
 
   // Filters
-  const [search, setSearch]   = useState('');
-  const [status, setStatus]   = useState('all');
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
   const [priority, setPriority] = useState('all');
-  const [sortBy, setSortBy]   = useState('newest');
+  const [sortBy, setSortBy] = useState('newest');
 
-  // Pagination
-  const [page, setPage]             = useState(1);
+  // Pagination (List view only)
+  const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
+  // "By Stage" mode: full sorted dataset (client-side paging)
+  const stageAllJobsRef = useRef([]);
 
   // Modal
-  const [modalOpen, setModalOpen]     = useState(false);
-  const [editingJob, setEditingJob]   = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState(null);
 
   // Debounce ref
   const searchTimer = useRef(null);
@@ -107,21 +111,63 @@ const DashboardPage = () => {
   // ── Reset page when filters / search change ────────────────────────────────
   useEffect(() => {
     setPage(1);
+    stageAllJobsRef.current = [];
   }, [debouncedSearch, status, priority, sortBy]);
 
-  // ── Fetch jobs list ────────────────────────────────────────────────────────
+  // Pipeline order for client-side "By Stage" sort
+  const STATUS_ORDER = {
+    interview: 0,
+    screening: 1,
+    applied: 2,
+    offer: 3,
+    rejected: 4,
+    ghosted: 5
+  };
+  const PAGE_SIZE = 5;
+
+  // ── Fetch jobs list (paginated — List view) ─────────────────────────────
   const fetchJobs = useCallback(async () => {
     setLoadingJobs(true);
     try {
-      const params = { page, limit: 5 };
-      if (debouncedSearch) params.search   = debouncedSearch;
-      if (status !== 'all')   params.status   = status;
-      if (priority !== 'all') params.priority = priority;
-      params.sortBy = sortBy;
+      if (sortBy === 'by_stage') {
+        if (stageAllJobsRef.current.length > 0) {
+          // ─ Cache hit: just re-slice for the new page (no API call) ─────────
+          const start = (page - 1) * PAGE_SIZE;
+          const slice = stageAllJobsRef.current.slice(start, start + PAGE_SIZE);
+          setJobs(slice);
+          setPagination(prev => prev ? { ...prev, page } : prev);
+        } else {
+          // ─ Cache miss: fetch all, sort, populate cache, slice page 1 ────────
+          const params = { limit: 1000 };
+          if (debouncedSearch) params.search = debouncedSearch;
+          if (status !== 'all') params.status = status;
+          if (priority !== 'all') params.priority = priority;
 
-      const { data } = await api.get('/api/jobs', { params });
-      setJobs(Array.isArray(data) ? data : data.jobs ?? []);
-      setPagination(data?.pagination ?? null);
+          const { data } = await api.get('/api/jobs', { params });
+          const all = Array.isArray(data) ? data : data.jobs ?? [];
+          const sorted = [...all].sort(
+            (a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99)
+          );
+
+          stageAllJobsRef.current = sorted;
+          const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+          const safePage = Math.min(page, totalPages);
+          setJobs(sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE));
+          setPagination({ total: sorted.length, totalPages, page: safePage });
+        }
+      } else {
+        // ─ Normal backend-paginated fetch ───────────────────────────────
+        const params = { page, limit: PAGE_SIZE };
+        if (debouncedSearch) params.search = debouncedSearch;
+        if (status !== 'all') params.status = status;
+        if (priority !== 'all') params.priority = priority;
+        params.sortBy = sortBy;
+
+        const { data } = await api.get('/api/jobs', { params });
+        stageAllJobsRef.current = [];
+        setJobs(Array.isArray(data) ? data : data.jobs ?? []);
+        setPagination(data?.pagination ?? null);
+      }
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to load jobs.');
     } finally {
@@ -129,15 +175,37 @@ const DashboardPage = () => {
     }
   }, [debouncedSearch, status, priority, sortBy, page]);
 
+  // ── Fetch ALL jobs (unpaginated — Kanban view) ────────────────────────────
+  const fetchAllJobs = useCallback(async () => {
+    setLoadingKanban(true);
+    try {
+      const params = { limit: 1000 };
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (status !== 'all') params.status = status;
+      if (priority !== 'all') params.priority = priority;
+      // Kanban has no meaningful sort, omit sortBy
+
+      const { data } = await api.get('/api/jobs', { params });
+      setKanbanJobs(Array.isArray(data) ? data : data.jobs ?? []);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to load jobs.');
+    } finally {
+      setLoadingKanban(false);
+    }
+  }, [debouncedSearch, status, priority]);
+
   useEffect(() => { fetchSummary(); }, [fetchSummary]);
-  useEffect(() => { fetchJobs(); }, [fetchJobs]);
+  // List view: fetch paginated
+  useEffect(() => { if (view === 'list') fetchJobs(); }, [fetchJobs, view]);
+  // Kanban view: fetch all jobs whenever view is kanban or filters change
+  useEffect(() => { if (view === 'kanban') fetchAllJobs(); }, [fetchAllJobs, view]);
 
   // ── Delete job ─────────────────────────────────────────────────────────────
   const handleDelete = async (jobId) => {
     try {
       await api.delete(`/api/jobs/${jobId}`);
       toast.success('Application deleted.');
-      fetchJobs();
+      if (view === 'list') fetchJobs(); else fetchAllJobs();
       fetchSummary();
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to delete.');
@@ -152,7 +220,7 @@ const DashboardPage = () => {
 
   // ── After save in modal ────────────────────────────────────────────────────
   const handleSaved = () => {
-    fetchJobs();
+    if (view === 'list') fetchJobs(); else fetchAllJobs();
     fetchSummary();
   };
 
@@ -295,21 +363,23 @@ const DashboardPage = () => {
 
           {/* Filters + Add */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Status filter */}
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              style={selectStyle}
-              onFocus={(e) => (e.target.style.borderColor = '#FFE500')}
-              onBlur={(e) => (e.target.style.borderColor = '#222222')}
-            >
-              <option value="all">All Status</option>
-              {['applied', 'screening', 'interview', 'offer', 'rejected', 'ghosted'].map((s) => (
-                <option key={s} value={s} style={{ backgroundColor: '#111111' }}>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </option>
-              ))}
-            </select>
+            {/* Status filter — List view only */}
+            {view === 'list' && (
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                style={selectStyle}
+                onFocus={(e) => (e.target.style.borderColor = '#FFE500')}
+                onBlur={(e) => (e.target.style.borderColor = '#222222')}
+              >
+                <option value="all">All Status</option>
+                {['applied', 'screening', 'interview', 'offer', 'rejected', 'ghosted'].map((s) => (
+                  <option key={s} value={s} style={{ backgroundColor: '#111111' }}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
+            )}
 
             {/* Priority filter */}
             <select
@@ -327,18 +397,19 @@ const DashboardPage = () => {
               ))}
             </select>
 
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              style={selectStyle}
-              onFocus={(e) => (e.target.style.borderColor = '#FFE500')}
-              onBlur={(e) => (e.target.style.borderColor = '#222222')}
-            >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="company">Company A–Z</option>
-            </select>
+            {/* Sort — List view only */}
+            {view === 'list' && (
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={selectStyle}
+                onFocus={(e) => (e.target.style.borderColor = '#FFE500')}
+                onBlur={(e) => (e.target.style.borderColor = '#222222')}
+              >
+                <option value="newest">Newest First</option>
+                <option value="by_stage">By Stage</option>
+              </select>
+            )}
 
             {/* Add Job */}
             <button
@@ -356,18 +427,23 @@ const DashboardPage = () => {
 
         {/* ── Section 3: View toggle ───────────────────────────────────────── */}
         <div className="flex items-center gap-2" style={{ marginBottom: '20px' }}>
-          <ViewBtn id="list"   icon={<List size={13} />}         label="List" />
+          <ViewBtn id="list" icon={<List size={13} />} label="List" />
           <ViewBtn id="kanban" icon={<Columns2 size={13} />} label="Kanban" />
 
-          {/* Total count from backend */}
-          {!loadingJobs && pagination && (
+          {/* Total count */}
+          {view === 'list' && !loadingJobs && pagination && (
             <span style={{ fontSize: '12px', color: '#444444', marginLeft: '4px' }}>
               {pagination.total} {pagination.total === 1 ? 'application' : 'applications'}
             </span>
           )}
-          {!loadingJobs && !pagination && (
+          {view === 'list' && !loadingJobs && !pagination && (
             <span style={{ fontSize: '12px', color: '#444444', marginLeft: '4px' }}>
               {jobs.length} {jobs.length === 1 ? 'application' : 'applications'}
+            </span>
+          )}
+          {view === 'kanban' && !loadingKanban && (
+            <span style={{ fontSize: '12px', color: '#444444', marginLeft: '4px' }}>
+              {kanbanJobs.length} {kanbanJobs.length === 1 ? 'application' : 'applications'}
             </span>
           )}
         </div>
@@ -426,42 +502,42 @@ const DashboardPage = () => {
                 {loadingJobs
                   ? Array.from({ length: 5 }, (_, i) => <SkeletonRow key={i} />)
                   : jobs.length === 0
-                  ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        style={{
-                          padding: '48px 16px',
-                          textAlign: 'center',
-                          color: '#333333',
-                          fontSize: '13px',
-                        }}
-                      >
-                        No applications found.{' '}
-                        <button
-                          onClick={() => setModalOpen(true)}
+                    ? (
+                      <tr>
+                        <td
+                          colSpan={6}
                           style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#FFE500',
-                            cursor: 'pointer',
+                            padding: '48px 16px',
+                            textAlign: 'center',
+                            color: '#333333',
                             fontSize: '13px',
-                            fontFamily: 'Inter, system-ui, sans-serif',
                           }}
                         >
-                          Add your first one →
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                  : jobs.map((job) => (
-                    <JobCard
-                      key={job.id}
-                      job={job}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  ))}
+                          No applications found.{' '}
+                          <button
+                            onClick={() => setModalOpen(true)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#FFE500',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              fontFamily: 'Inter, system-ui, sans-serif',
+                            }}
+                          >
+                            Add your first one →
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                    : jobs.map((job) => (
+                      <JobCard
+                        key={job.id}
+                        job={job}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
+                    ))}
               </tbody>
             </table>
           </div>
@@ -470,17 +546,17 @@ const DashboardPage = () => {
         {/* ── Section 4B: Kanban view ──────────────────────────────────────── */}
         {view === 'kanban' && (
           <KanbanBoard
-            jobs={jobs}
+            jobs={kanbanJobs}
             onEdit={handleEdit}
             onRefresh={() => {
-              fetchJobs();
+              fetchAllJobs();
               fetchSummary();
             }}
           />
         )}
 
-        {/* ── Section 5: Pagination controls ──────────────────────────────── */}
-        {pagination && pagination.totalPages > 1 && (
+        {/* ── Section 5: Pagination controls (List view only) ─────────────── */}
+        {view === 'list' && pagination && pagination.totalPages > 1 && (
           <div
             style={{
               display: 'flex',
