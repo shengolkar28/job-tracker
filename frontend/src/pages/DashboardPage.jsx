@@ -123,7 +123,7 @@ const DashboardPage = () => {
     rejected: 4,
     ghosted: 5
   };
-  const PAGE_SIZE = 5;
+  const PAGE_SIZE = 8;
 
   // ── Fetch jobs list (paginated — List view) ─────────────────────────────
   const fetchJobs = useCallback(async () => {
