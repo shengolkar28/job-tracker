@@ -308,21 +308,26 @@ const DashboardPage = () => {
             icon={<Briefcase size={14} />}
           />
           <StatsCard
+            label="Screening"
+            value={summary?.byStatus?.screening ?? 0}
+            loading={loadingSummary}
+            icon={<TrendingUp size={14} />}
+          />
+          <StatsCard
             label="Interviews"
             value={summary?.byStatus?.interview ?? 0}
             loading={loadingSummary}
             icon={<Users size={14} />}
           />
           <StatsCard
-            label="Offers"
-            value={summary?.byStatus?.offer ?? 0}
-            loading={loadingSummary}
-            yellow
-            icon={<TrendingUp size={14} />}
-          />
-          <StatsCard
             label="Rejected"
             value={summary?.byStatus?.rejected ?? 0}
+            loading={loadingSummary}
+            icon={<XCircle size={14} />}
+          />
+          <StatsCard
+            label="Ghosted"
+            value={summary?.byStatus?.ghosted ?? 0}
             loading={loadingSummary}
             icon={<XCircle size={14} />}
           />
