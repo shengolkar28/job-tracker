@@ -1,13 +1,14 @@
 // ─── StatsCard ────────────────────────────────────────────────────────────────
 // Displays a single KPI metric with a label + large number.
 // Props:
-//   label    — muted caps label
-//   value    — numeric value (or null while loading)
-//   loading  — show animated skeleton when true
-//   yellow   — if true, renders the value in brand yellow (#FFE500)
-//   icon     — optional lucide-react element to decorate the card
+//   label      — muted caps label
+//   value      — numeric value (or null while loading)
+//   loading    — show animated skeleton when true
+//   yellow     — if true, renders the value in brand yellow (#FFE500)
+//   icon       — optional lucide-react element to decorate the card
+//   valueColor — optional CSS color string; overrides value text color when set
 
-const StatsCard = ({ label, value, loading = false, yellow = false, icon }) => {
+const StatsCard = ({ label, value, loading = false, yellow = false, icon, valueColor }) => {
   return (
     <div
       style={{
@@ -59,7 +60,7 @@ const StatsCard = ({ label, value, loading = false, yellow = false, icon }) => {
             fontWeight: '900',
             letterSpacing: '-0.04em',
             lineHeight: 1,
-            color: yellow ? '#FFE500' : '#FFFFFF',
+            color: valueColor ?? (yellow ? '#FFE500' : '#FFFFFF'),
             transition: 'color 0.2s',
           }}
         >

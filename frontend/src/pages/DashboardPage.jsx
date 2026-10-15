@@ -311,12 +311,14 @@ const DashboardPage = () => {
             label="Screening"
             value={summary?.byStatus?.screening ?? 0}
             loading={loadingSummary}
+            valueColor="#3B82F6"
             icon={<TrendingUp size={14} />}
           />
           <StatsCard
             label="Interviews"
             value={summary?.byStatus?.interview ?? 0}
             loading={loadingSummary}
+            valueColor="#FFE500"
             icon={<Users size={14} />}
           />
           <StatsCard
